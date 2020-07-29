@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:grpc/grpc.dart';
+
+import 'package:flutter_grpc_demo/src/generated/helloworld.pb.dart';
+import 'package:flutter_grpc_demo/src/generated/helloworld.pbgrpc.dart';
+
 void main() {
   runApp(MyApp());
 }
@@ -49,8 +54,54 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
+// Future<void> main(List<String> args) async {
+//   final channel = ClientChannel(
+//     'localhost',
+//     port: 50051,
+//     options: const ChannelOptions(credentials: ChannelCredentials.insecure()),
+//   );
+//   final stub = GreeterClient(channel);
+
+//   final name = args.isNotEmpty ? args[0] : 'world';
+
+//   try {
+//     final response = await stub.sayHello(HelloRequest()..name = name);
+//     print('Greeter client received: ${response.message}');
+//   } catch (e) {
+//     print('Caught error: $e');
+//   }
+//   await channel.shutdown();
+// }
+
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  String message = "No Message Yet";
+
+  Future<String> getGreeting(String name) async {
+    final channel = ClientChannel(
+      // '10.0.0.2',
+      '172.17.0.1',
+      port: 50051,
+      options: const ChannelOptions(credentials: ChannelCredentials.insecure()),
+    );
+    final stub = GreeterClient(channel);
+
+    var message = "";
+
+    try {
+      final response = await stub.sayHello(HelloRequest()..name = name);
+      print('Greeter client received: ${response.message}');
+
+      message = response.toString();
+    } catch (e) {
+      print('Caught error: $e');
+
+      message = "An Error Occured";
+    }
+    await channel.shutdown();
+
+    return message.toString();
+  }
 
   void _incrementCounter() {
     setState(() {
@@ -60,7 +111,13 @@ class _MyHomePageState extends State<MyHomePage> {
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
       _counter++;
+
+      getGreeting("Zulfiqar").then((value) => this.setGreeting(value));
     });
+  }
+
+  void setGreeting(String message) {
+    this.message = message;
   }
 
   @override
@@ -103,6 +160,10 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               '$_counter',
               style: Theme.of(context).textTheme.headline4,
+            ),
+            Text(
+              '$message',
+              style: Theme.of(context).textTheme.bodyText1,
             ),
           ],
         ),
